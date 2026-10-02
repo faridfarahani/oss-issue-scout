@@ -908,5 +908,60 @@ def _graphql_issue_node(
     }
 
 
+
+class MultipleFilterTests(unittest.TestCase):
+    def test_query_supports_multiple_languages(self) -> None:
+        query = _build_issue_query(
+            language=["python", "rust"],
+            stars_min=None,
+            stars_max=None,
+            label=None,
+            updated_days=None,
+        )
+
+        self.assertIn("(language:python OR language:rust)", query)
+
+    def test_query_supports_multiple_labels(self) -> None:
+        query = _build_issue_query(
+            language=None,
+            stars_min=None,
+            stars_max=None,
+            label=["good first issue", "help wanted"],
+            updated_days=None,
+        )
+
+        self.assertIn('label:"good first issue","help wanted"', query)
+
+    def test_query_includes_max_stars(self) -> None:
+        query = _build_issue_query(
+            language=None,
+            stars_min=100,
+            stars_max=5000,
+            label=None,
+            updated_days=None,
+        )
+
+        self.assertIn("stars:>=100", query)
+        self.assertIn("stars:<=5000", query)
+
+    def test_filters_repositories_above_max_stars(self) -> None:
+        with (
+            patch("oss_issue_scout.github_api._get_token", return_value="token"),
+            patch("oss_issue_scout.github_api._request_graphql", side_effect=_fake_graphql),
+        ):
+            issues = search_issues(stars_max=10_000, limit=5)
+
+        self.assertEqual(issues, [])
+
+    def test_matches_any_selected_language(self) -> None:
+        with (
+            patch("oss_issue_scout.github_api._get_token", return_value="token"),
+            patch("oss_issue_scout.github_api._request_graphql", side_effect=_fake_graphql),
+        ):
+            issues = search_issues(language=["rust", "python"], limit=5)
+
+        self.assertEqual([issue.repo for issue in issues], ["example/project"])
+
+
 if __name__ == "__main__":
     unittest.main()
