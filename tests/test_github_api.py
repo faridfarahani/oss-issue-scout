@@ -151,6 +151,19 @@ class SearchIssuesTests(unittest.TestCase):
         self.assertEqual([issue.repo for issue in issues], ["example/project"])
         self.assertEqual(request_json.call_count, 1)
 
+    def test_backfill_applies_max_stars(self) -> None:
+        with patch("oss_issue_scout.github_api._request_json", side_effect=_fake_rest) as request_json:
+            issues = backfill_issue_candidates(
+                repo="example/project",
+                stars_max=10_000,
+                per_page=25,
+                page=1,
+            )
+
+        search_call = request_json.call_args_list[0]
+        self.assertIn("stars:<=10000", search_call.args[1]["q"])
+        self.assertEqual(issues, [])
+
     def test_filters_by_min_stars_from_graphql_repo_data(self) -> None:
         with (
             patch("oss_issue_scout.github_api._get_token", return_value="token"),

@@ -235,6 +235,7 @@ def backfill_issue_candidates(
                 "q": _build_repo_issue_query(
                     repo=repo,
                     language=language,
+                    stars_max=stars_max,
                     label=label,
                     updated_days=updated_days,
                 ),
@@ -852,6 +853,7 @@ def _build_repo_issue_query(
     *,
     repo: str,
     language: str | list[str] | None,
+    stars_max: int | None,
     label: str | list[str] | None,
     updated_days: int | None,
 ) -> str:
@@ -868,6 +870,8 @@ def _build_repo_issue_query(
         parts.append(f"language:{_quote_query_value(languages[0])}")
     elif languages:
         parts.append("(" + " OR ".join(f"language:{_quote_query_value(value)}" for value in languages) + ")")
+    if stars_max is not None:
+        parts.append(f"stars:<={stars_max}")
     labels = _filter_values(label)
     if len(labels) == 1:
         parts.append(f"label:{_quote_query_value(labels[0])}")
