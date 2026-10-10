@@ -67,7 +67,7 @@ The script starts the backend API at `http://localhost:5000`, serves the fronten
 ## Options
 
 ```text
---language            One or more repository primary languages, such as python rust; default: no language filter
+--language            One or more repository primary languages (maximum 6), such as python rust; default: no language filter
 --stars-min           Minimum repository stars; defaults to at least 100
 --stars-max           Maximum repository stars; default: no maximum
 --label               One or more issue labels; multiple values match any label; default: no label filter
@@ -78,6 +78,8 @@ The script starts the backend API at `http://localhost:5000`, serves the fronten
 --preset              Scoring preset: default, junior, intermediate, senior; default: default
 --format              Output format: table, markdown, json; default: table
 ```
+
+Multiple languages match any selected language. Providing more than 6 language filters returns an error.
 
 Examples:
 

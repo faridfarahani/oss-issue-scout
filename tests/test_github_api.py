@@ -935,7 +935,7 @@ class MultipleFilterTests(unittest.TestCase):
 
         self.assertIn("(language:python OR language:rust)", query)
 
-    def test_language_filter_respects_github_boolean_limit(self) -> None:
+    def test_language_filter_accepts_six_languages(self) -> None:
         languages = [
             "python",
             "rust",
@@ -943,7 +943,6 @@ class MultipleFilterTests(unittest.TestCase):
             "java",
             "javascript",
             "typescript",
-            "swift",
         ]
 
         queries = [
@@ -965,8 +964,48 @@ class MultipleFilterTests(unittest.TestCase):
 
         for query in queries:
             self.assertEqual(query.count(" OR "), 5)
-            self.assertIn("language:typescript", query)
-            self.assertNotIn("language:swift", query)
+            self.assertEqual(query.count("language:"), 6)
+            for language in languages:
+                self.assertIn(f"language:{language}", query)
+
+    def test_query_rejects_more_than_six_languages(self) -> None:
+        languages = ["python", "rust", "go", "java", "javascript", "typescript", "swift"]
+        for builder, kwargs in (
+            (_build_issue_query, {"stars_min": None}),
+            (_build_repo_issue_query, {"repo": "example/project"}),
+        ):
+            with self.subTest(builder=builder.__name__):
+                with self.assertRaisesRegex(GitHubAPIError, "at most 6 language filters; received 7"):
+                    builder(
+                        language=languages,
+                        stars_max=None,
+                        label=None,
+                        updated_days=None,
+                        **kwargs,
+                    )
+
+    def test_global_search_rejects_excess_languages_before_request(self) -> None:
+        languages = ["python", "rust", "go", "java", "javascript", "typescript", "swift"]
+        for token in (None, "token"):
+            with (
+                self.subTest(token=token),
+                patch("oss_issue_scout.github_api._get_token", return_value=token),
+                patch("oss_issue_scout.github_api._request_graphql") as request_graphql,
+                patch("oss_issue_scout.github_api._request_json") as request_json,
+            ):
+                with self.assertRaisesRegex(GitHubAPIError, "at most 6 language filters; received 7"):
+                    search_issues(language=languages)
+
+                request_graphql.assert_not_called()
+                request_json.assert_not_called()
+
+    def test_repo_search_rejects_excess_languages_before_request(self) -> None:
+        languages = ["python", "rust", "go", "java", "javascript", "typescript", "swift"]
+        with patch("oss_issue_scout.github_api._request_json") as request_json:
+            with self.assertRaisesRegex(GitHubAPIError, "at most 6 language filters; received 7"):
+                backfill_issue_candidates(repo="example/project", language=languages)
+
+            request_json.assert_not_called()
 
     def test_query_supports_multiple_labels(self) -> None:
         query = _build_issue_query(
