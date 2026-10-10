@@ -12,6 +12,7 @@ from oss_issue_scout.github_api import (
     MAX_REST_SEARCH_PAGES,
     MIN_REPO_OPEN_ISSUES,
     _build_issue_query,
+    _build_repo_issue_query,
     _request_graphql,
     _request_json,
     backfill_issue_candidates,
@@ -933,6 +934,39 @@ class MultipleFilterTests(unittest.TestCase):
         )
 
         self.assertIn("(language:python OR language:rust)", query)
+
+    def test_language_filter_respects_github_boolean_limit(self) -> None:
+        languages = [
+            "python",
+            "rust",
+            "go",
+            "java",
+            "javascript",
+            "typescript",
+            "swift",
+        ]
+
+        queries = [
+            _build_issue_query(
+                language=languages,
+                stars_min=None,
+                stars_max=None,
+                label=None,
+                updated_days=None,
+            ),
+            _build_repo_issue_query(
+                repo="example/project",
+                language=languages,
+                stars_max=None,
+                label=None,
+                updated_days=None,
+            ),
+        ]
+
+        for query in queries:
+            self.assertEqual(query.count(" OR "), 5)
+            self.assertIn("language:typescript", query)
+            self.assertNotIn("language:swift", query)
 
     def test_query_supports_multiple_labels(self) -> None:
         query = _build_issue_query(

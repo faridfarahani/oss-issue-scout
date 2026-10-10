@@ -825,7 +825,7 @@ def _build_issue_query(
     parts = ["is:issue", "is:open", "archived:false", "-linked:pr", "no:assignee"]
     if query:
         parts.append(_quote_query_value(query))
-    languages = _filter_values(language)
+    languages = _filter_values(language)[:6]
     if len(languages) == 1:
         parts.append(f"language:{_quote_query_value(languages[0])}")
     elif languages:
@@ -865,7 +865,7 @@ def _build_repo_issue_query(
         "-linked:pr",
         "no:assignee",
     ]
-    languages = _filter_values(language)
+    languages = _filter_values(language)[:6]
     if len(languages) == 1:
         parts.append(f"language:{_quote_query_value(languages[0])}")
     elif languages:
